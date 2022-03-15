@@ -1,0 +1,15 @@
+
+Prezident
+	Stav hry je 4-tica S = (OB1, OB2, ZH, i, SP)
+		- OB1, OB2 sú odhadzovacie balíčky
+		- ZH je zoznam hráčov
+		- i je index hráča na ťahu
+		- SP je n-tica stavových premenných (N, LP)
+	Postupnosť hodnôt:
+		- 3 < 4 < 5 < 6 < 7 < 8 < 9 < 10 < J < Q < K < A < 2 < Joker
+	Pravidlá:
+		1)
+			- ak SP[N] = n a TOP[0][H] = h, potom zahraj n-ticu Kn kariet s hodnotou h2 (h2 > h) do OB1
+			- zahraj kartu Joker a presun obsah OB1 do OB2 a zahraj lubovoľnú n-ticu kariet Kn z ruky s hodnotou h do OB1
+		2)
+			- ak hráč zahral KN, potom LP = i a (i = (i + 1) % n)
