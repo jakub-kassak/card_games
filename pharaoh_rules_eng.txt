@@ -1,0 +1,49 @@
+Card C is a pair (suit, val).
+
+A pack of cards PC is a multiset of cards.
+Hand H is a multiset of cards (subset of DC), which is assigned to a player.
+
+Discard pile DP is a place, where players place their cards face-down.
+Pulling pile PP is a list of cards, from where players draw cards (usually cards lie here face-down).
+
+The game state is 5-tuple GS = (DP, S, LP, i, SV)
+    - DP - discard pile
+    - PP - pulling pile
+    - LP - list of players, #LP is the number of players
+    - i - player's index on the turn
+    - SV - 3-tuple of state variables (a, suit , cnt)
+
+A player is uniquely identified by his number in the player list. Each player has exactly one hand.
+Turn is player's opportunity to change game state by playing exactly one rule.
+
+Players take turns in a fixed round-robin order.
+Game ends, when only one player has remaining card(s) on his hand.
+
+A rule is an implication in the form “if antecedent then consequent”. Antecedents are conditions that - when fulfilled - trigger actions defined in consequents.
+
+Game begins in a predefined initial state.
+    - cards are dealt evenly to all players, so that each player has a maximum of 5 cards and at least 5 cards remain in the deck
+    - one card is put on top of DP, rest of the cards remain in S
+    - SV[a] = 0, SV[suit] = TOP[F], SV[cnt] = 1
+    
+Cn is a tuple of cards played during the player's turn, where 1 <= n <= 4. CA denotes all cards in the Cn tuple.
+The top card in PP called TOP.
+
+Rules:
+    - (SV[a] == 0 & SV[cnt] == 1 & SV[suit] == Cn[-1][val] & CA[val] = v)    ->  put Cn into DP
+    - (SV[a] == 0 & SV[cnt] == 1 & TOP[val] == CA[val])   -> put Cn into DP
+    - (TOP == (leaves, under) & CA[val] == v)   -> put Cn into DP
+    - (SV[a] == k (1 <= k <= 3) & CA[val] == ace)   -> put Cn into DP
+    - (SV[a] == 0 & Cn[-1] == (leaves, under) & CA[val] == under)   -> put Cn into DP
+    - (SV[a] == 0)   ->  draw SV[cnt] cards from S
+
+Game mechanics (occur after the rule is applied)
+    - CA[val] == ace  ->  SV[a] += n
+    - Cn[-1] == (leaves, under) -> SV[cnt] = 1
+    - empty ->  SV[a] = max(0, SV[a] - 1)
+    - (SV[a] == 0 & Cn == empty)   ->   SV[cnt] = 1
+    - (CA[val] == over & c is the suit selected by the player A[i])   ->   SV[suit] = c
+    - CA[val] != over     ->   SV[suit] = CA[suit]
+    - CA[val] == VII  ->  SV[cnt] = 3 * N if SV[cnt] == 1 else SV[cnt] + 3 * n
+
+			

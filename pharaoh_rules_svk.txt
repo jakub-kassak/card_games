@@ -1,0 +1,45 @@
+Karta K - dvojica (farba, hodnota).
+Sada kariet SK - multimnožina kariet.
+Ruka R je multimnožina kariet (podmnožina balicka), prislúchajúca hráčovi.
+
+Odhadzovací balíček OB je miesto, kde hráči môžu umiestniť karty lícom nahor.
+Ťahací balíček TB je miesto, kde sú uložené kraty lícom nadol.
+
+Ťah je taký stav hry, počas ktorého môže hráč na ťahu odohrať premenlivý počet pravidiel. Ťah konči keď je hráč von (out) alebo hotový (done). 
+Kolá hry sa odohrávajú ťahovým spôsobom s round-robin poradím ťahov.
+Hra končí, keď v hre ostane posledný hráč.
+
+Pravidlo je implikácia tvaru 'ak antecendet, potom konzekvent' a môže byť použité na zmenu stavu hry, len ak je podmienka splnená.
+Vrchnú kartu v OB označujeme TOP.
+	
+Hra má dve fázy - rozdanie kariet = vytvorenie úvodného stavu hry, hra.
+Hráč je jednoznačne určeny svojím čislom v zozname hráčov. Každý hráč má práve jednu ruku.
+Kn je n-tica kariet, ktoré hráč zahral počas svojho ťahu, kde 1 <= n <= 4. KA označuje všetky karty v n-tici Kn.
+
+Faraón
+	Stav hry je 5-tica S = (OB, TB, ZH, i, SP) 
+		- OB - odhadzovací balíček
+		- TB - ťahací balíček
+		- ZH - zoznam hráčov, P je počet hráčov
+		- i - index hráča na ťahu
+		- SP - 3-ica stavových premenných (A, F, T)
+	Úvodný stav hry:
+		- rovnomerne rozdáme karty všetkým hráčom, tak aby mal každy max 5 a aspoň 5 kariet ostalo v balíčku
+		- jednu kartu položime do OB a zvyšné karty umiestnime do TB
+		- SP[A] = 0, SP[F] = TOP[F], SP[T] = 1
+	Pravidlá:
+        - (SP[A] == 0 & SP[T] == 1 & SP[F] == Kn[-1][H] & KA[H] = h)    ->  zahraj do OB n-ticu Kn
+        - (SP[A] == 0 & SP[T] == 1 & TOP[H] == KA[H])   ->  zahraj do OB n-ticu Kn
+        - (TOP == (zeleny, dolnik) & KA[H] == h)     ->  zahraj do OB n-ticu Kn
+        - (SP[A] == k (1 <= k <= 3) & KA[H] == eso)    ->  zahraj do OB n-ticu Kn
+        - (SP[A] == 0 & Kn[-1] == (zeleny, dolnik) & KA[H] == dolnik)    ->  zahraj do OB n-ticu Kn & SP[T] = 1
+        - (SP[A] == 0)   ->  (ťahaj SP[T] kariet z TB & SP[T] = 1)
+	Herné mechaniky (nastávajú po aplikovaní pravidla)
+        - KA[H] == eso  ->  SP[A] += n
+        - SP[A] = max(0, SP[A] - 1)
+        - Kn == empty   ->  pokracuj
+        - (KA[H] == hornik & f je farba vybrana hracom A[i])   ->   SP[F] = f
+        - KA[H] != hornik     ->   SP[F] = KA[H]
+        - KA[H] == VII  ->  SP[T] = 3 * N if SP[T] == 1 else SP[T] + 3 * n
+
+			
