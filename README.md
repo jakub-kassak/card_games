@@ -1,2 +1,2 @@
-# card_games
+# Card games 
 Repository for years project
