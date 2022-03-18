@@ -1,49 +1,59 @@
-Card C is a pair (suit, val).
+Card C is a pair (suit, value). C[suit] denotes the suit and C[val] denotes value of card C.
 
-A pack of cards PC is a multiset of cards.
+A pack P is a multiset of cards.
 Hand H is a multiset of cards (subset of DC), which is assigned to a player.
 
-Discard pile DP is a place, where players place their cards face-down.
-Pulling pile PP is a list of cards, from where players draw cards (usually cards lie here face-down).
+Discard pile DP is a place, where players place their cards (usually face-up). The top card in DP is called TOP.
+Stock ST is a list of cards, from where players draw cards (usually cards lie here face-down).
 
-The game state is 5-tuple GS = (DP, S, LP, i, SV)
+The game state is 5-tuple GS = (DP, ST, LP, SV, LP_MC)
     - DP - discard pile
-    - PP - pulling pile
+    - ST - stock
     - LP - list of players, #LP is the number of players
-    - i - player's index on the turn
-    - SV - 3-tuple of state variables (a, suit , cnt)
+    - SV - 6-tuple of state variables (ace, suit, val, cnt, i, mc)
+        - ace - ace counter
+        - suit - currently valid top suit (most of the time TOP[suit] == SV[suit])
+        - val - currently valid top value (TOP[val] == SV[val])
+        - cnt - draw count
+        - i - player's index on the turn
+        - mc - move counter
+    - LP_MC - list, which contains the value of MC when player got rid of all cards (if a player j is still in the game LP_MC[i] == -1)
 
-A player is uniquely identified by his number in the player list. Each player has exactly one hand.
-Turn is player's opportunity to change game state by playing exactly one rule.
+A player is uniquely identified by his position in the list of players. Each player has exactly one hand.
+A rule is an implication in the form “if antecedent then consequent”. Antecedents are conditions that, when fulfilled,
+trigger actions defined in consequents.
+An instance of rule joined with suitable game mechanics is called move.     TODO example
+A turn is player's opportunity to change game state by using exactly one move.
 
 Players take turns in a fixed round-robin order.
 Game ends, when only one player has remaining card(s) on his hand.
 
-A rule is an implication in the form “if antecedent then consequent”. Antecedents are conditions that - when fulfilled - trigger actions defined in consequents.
-
 Game begins in a predefined initial state.
     - cards are dealt evenly to all players, so that each player has a maximum of 5 cards and at least 5 cards remain in the deck
     - one card is put on top of DP, rest of the cards remain in S
-    - SV[a] = 0, SV[suit] = TOP[F], SV[cnt] = 1
+    - SV[ace] = 0, SV[suit] = TOP[suit], SV[val] = TOP[val], SV[cnt] = 1
     
-Cn is a tuple of cards played during the player's turn, where 1 <= n <= 4. CA denotes all cards in the Cn tuple.
-The top card in PP called TOP.
+Cn is a tuple of cards played during the player's turn, where 1 <= n <= 4. We can index Cn just like a regular tuple -
+for example Cn[0] is the first (bottom) card in the Cn tuple. The notation Cn[val] == v is equivalent to (∀i, 0 <= i <= n): Cn[i][val] == v.
 
 Rules:
-    - (SV[a] == 0 & SV[cnt] == 1 & SV[suit] == Cn[-1][val] & CA[val] = v)    ->  put Cn into DP
-    - (SV[a] == 0 & SV[cnt] == 1 & TOP[val] == CA[val])   -> put Cn into DP
-    - (TOP == (leaves, under) & CA[val] == v)   -> put Cn into DP
-    - (SV[a] == k (1 <= k <= 3) & CA[val] == ace)   -> put Cn into DP
-    - (SV[a] == 0 & Cn[-1] == (leaves, under) & CA[val] == under)   -> put Cn into DP
-    - (SV[a] == 0)   ->  draw SV[cnt] cards from S
+    - (SV[ace] == 0 & SV[cnt] == 1 & SV[suit] == Cn[0][val] & Cn[val] = v)    ->  put Cn into DP
+    - (SV[ace] == 0 & SV[cnt] == 1 & SV[val] == Cn[val])   -> put Cn into DP
+    - (SV[val] == under & SV[col] == leaves & Cn[val] == v)   -> put Cn into DP
+    - (SV[ace] == k (1 <= k <= 3) & Cn[val] == ace)   -> put Cn into DP
+    - (SV[ace] == 0 & Cn[0] == (leaves, under) & Cn[val] == under)   -> put Cn into DP
+    - ()   ->  draw SV[cnt] cards from S
 
 Game mechanics (occur after the rule is applied)
-    - CA[val] == ace  ->  SV[a] += n
-    - Cn[-1] == (leaves, under) -> SV[cnt] = 1
-    - empty ->  SV[a] = max(0, SV[a] - 1)
-    - (SV[a] == 0 & Cn == empty)   ->   SV[cnt] = 1
-    - (CA[val] == over & c is the suit selected by the player A[i])   ->   SV[suit] = c
-    - CA[val] != over     ->   SV[suit] = CA[suit]
-    - CA[val] == VII  ->  SV[cnt] = 3 * N if SV[cnt] == 1 else SV[cnt] + 3 * n
+    - Cn[val] == ace  ->  SV[ace] += n
+    - Cn[0] == (leaves, under) -> SV[cnt] = 1
+    - () ->  SV[ace] = max(0, SV[ace] - 1)
+    - (SV[ace] == 0 & Cn == empty)   ->   SV[cnt] = 1
+    - (Cn[val] == over & c is the suit selected by the player A[i])   ->   SV[suit] = c
+    - Cn[val] != over     ->   SV[suit] = Cn[suit]
+    - () -> SV[val] = Cn[val]
+    - Cn[val] == VII  ->  SV[cnt] = 3 * N if SV[cnt] == 1 else SV[cnt] + 3 * n
+    - () -> SV[i] = (SV[i] + 1) % #LP
+    - () -> SV[mc] += 1
 
 			
