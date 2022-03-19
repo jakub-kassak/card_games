@@ -10,6 +10,9 @@ class Suit(Enum):
     ACORN = 3
     LEAF = 4
 
+    def __repr__(self):
+        return self.name
+
 
 class Value(Enum):
     VII = 7
@@ -21,11 +24,17 @@ class Value(Enum):
     KING = 13
     ACE = 14
 
+    def __repr__(self):
+        return self.name
+
 
 @dataclass(frozen=True)
 class Card:
     suit: Suit
     value: Value
+
+    def __repr__(self):
+        return f'({repr(self.suit)}, {repr(self.value)})'
 
 
 SUITS: List[Suit] = [s for s in Suit]
