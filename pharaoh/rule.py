@@ -2,10 +2,31 @@ from __future__ import annotations
 
 from typing import Callable
 
+from pyrsistent import v
 from pyrsistent.typing import PVector
 
 from pharaoh.card import Card, Value, Suit
 from pharaoh.game_state import GameState, Hand
+
+
+class Move:
+    def __init__(self, cond: Condition, action: Action):
+        self._cond = cond
+        self._action = action
+
+    def test(self, state: GameState) -> bool:
+        return self._cond.test(state)
+
+    class ConditionUnsatisfied(Exception):
+        pass
+
+    def apply(self, state: GameState) -> GameState:
+        if not self.test(state):
+            raise self.ConditionUnsatisfied
+        return self._action.apply(state)
+
+    def __repr__(self):
+        return f'Move(cond={self._cond}, action={self._action})'
 
 
 class Condition:
@@ -106,3 +127,15 @@ class ChangeVariable(Action):
 
     def _description(self) -> str:
         return f'variable={self._variable}'  # , action={self._action}'
+
+
+ace_is_zero_cond = VariableCondition('ace', lambda ace: ace == 0)
+heart_ix_in_hand_cond = CardInHand(Card(Suit.HEART, Value.IX))
+cond1 = CondAnd(v(ace_is_zero_cond, heart_ix_in_hand_cond))
+
+play_heart_ix = PlayCard(Card(Suit.HEART, Value.IX))
+increase_player_index = ChangeVariable('i', lambda x: (x + 1) % 2)
+increase_mc = ChangeVariable('mc', lambda x: x + 1)
+action1 = ActionList(v(play_heart_ix, increase_player_index, increase_mc))
+
+move1 = Move(cond1, action1)
