@@ -1,12 +1,20 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import List, Callable, Union, Optional
 
 from pyrsistent import v
 from pyrsistent.typing import PVector
 
 from pharaoh.card import Card, Value, Suit
 from pharaoh.game_state import GameState, Hand
+
+ConditionCallable = Union[Callable[[Suit], bool], Callable[[Value], bool], Callable[[int], bool]]
+ActionCallable = Union[Callable[[Suit], Suit], Callable[[Value], Value], Callable[[int], int]]
+
+
+class Rule:
+    def generate_moves(self, deck: List[Card]) -> List[Move]:
+        raise NotImplementedError
 
 
 class Move:
@@ -52,7 +60,8 @@ class CondAnd(Condition):
 
 
 class VariableCondition(Condition):
-    def __init__(self, variable: str, condition: Callable[[Suit | Value | int], bool]):
+    def __init__(self, variable: str, condition: ConditionCallable, description: Optional[str]):
+        self._desc = description if description else 'unknown'
         self._variable = variable
         self._cond = condition
 
@@ -60,7 +69,7 @@ class VariableCondition(Condition):
         return self._cond(state.sv[self._variable])
 
     def _description(self) -> str:
-        return f'variable={self._variable}'  # , test={self._cond}'
+        return f'variable={self._variable}, cond=<{self._desc}>'
 
 
 class CardInHand(Condition):
@@ -115,8 +124,9 @@ class PlayCard(Action):
 
 
 class ChangeVariable(Action):
-    def __init__(self, variable: str, action: Callable[[Suit | Value | int], Suit | Value | int]):
+    def __init__(self, variable: str, action: ActionCallable, description: Optional[str]):
         self._action = action
+        self._desc = description if description else 'unknown'
         self._variable = variable
 
     def apply(self, state: GameState) -> GameState:
@@ -126,16 +136,16 @@ class ChangeVariable(Action):
         return state.set(sv=sv)
 
     def _description(self) -> str:
-        return f'variable={self._variable}'  # , action={self._action}'
+        return f'variable={self._variable}, action=<{self._desc}>'
 
 
-ace_is_zero_cond = VariableCondition('ace', lambda ace: ace == 0)
+ace_is_zero_cond = VariableCondition('ace', lambda ace: ace == 0, 'ace == 0')
 heart_ix_in_hand_cond = CardInHand(Card(Suit.HEART, Value.IX))
 cond1 = CondAnd(v(ace_is_zero_cond, heart_ix_in_hand_cond))
 
 play_heart_ix = PlayCard(Card(Suit.HEART, Value.IX))
-increase_player_index = ChangeVariable('i', lambda x: (x + 1) % 2)
-increase_mc = ChangeVariable('mc', lambda x: x + 1)
+increase_player_index = ChangeVariable('i', lambda x: (x + 1) % 2, '(i + 1) % 2')
+increase_mc = ChangeVariable('mc', lambda x: x + 1, 'mc + 1')
 action1 = ActionList(v(play_heart_ix, increase_player_index, increase_mc))
 
 move1 = Move(cond1, action1)
