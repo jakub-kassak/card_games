@@ -6,7 +6,7 @@ from pyrsistent import v
 from pyrsistent.typing import PVector
 
 from pharaoh.card import Card, Value, Suit
-from pharaoh.game_state import GameState, Hand
+from pharaoh.game_state import GameState, Player
 
 ConditionCallable = Union[Callable[[Suit], bool], Callable[[Value], bool], Callable[[int], bool]]
 ActionCallable = Union[Callable[[Suit], Suit], Callable[[Value], Value], Callable[[int], int]]
@@ -28,12 +28,23 @@ class Move:
     class ConditionUnsatisfied(Exception):
         pass
 
-    def apply(self, state: GameState) -> GameState:
+    def apply(self, state: GameState):
         if not self.test(state):
             raise self.ConditionUnsatisfied
-        return self._action.apply(state)
 
-    def __repr__(self):
+        state_evolver = state.evolver()
+        state_evolver.dp = state.dp.evolver()
+        state_evolver.st = state.st.evolver()
+        state_evolver.lp = state.lp.evolver()
+
+        self._action.apply(state_evolver)
+
+        state_evolver.dp = state_evolver.dp.persistent()
+        state_evolver.st = state_evolver.st.persistent()
+        state_evolver.lp = state_evolver.lp.persistent()
+        return state_evolver.persistent()
+
+    def __repr__(self) -> str:
         return f'Move(cond={self._cond}, action={self._action})'
 
 
@@ -62,14 +73,14 @@ class CondAnd(Condition):
 class VariableCondition(Condition):
     def __init__(self, variable: str, condition: ConditionCallable, description: Optional[str]):
         self._desc = description if description else 'unknown'
-        self._variable = variable
+        self._var = variable
         self._cond = condition
 
     def test(self, state: GameState) -> bool:
-        return self._cond(state.sv[self._variable])
+        return self._cond(state[self._var])
 
     def _description(self) -> str:
-        return f'variable={self._variable}, cond=<{self._desc}>'
+        return f'variable={self._var}, cond=<{self._desc}>'
 
 
 class CardInHand(Condition):
@@ -77,20 +88,20 @@ class CardInHand(Condition):
         self._card = card
 
     def test(self, state: GameState) -> bool:
-        return self._card in state.lp[state.sv['i']].bag
+        return self._card in state.lp[state['i']].hand
 
     def _description(self) -> str:
         return repr(self._card)
 
 
 class Action:
-    def apply(self, state: GameState) -> GameState:
+    def apply(self, s_evolver) -> None:
         raise NotImplementedError
 
     def _description(self) -> str:
         raise NotImplementedError
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self._description()})'
 
 
@@ -98,10 +109,9 @@ class ActionList(Action):
     def __init__(self, actions: PVector[Action]):
         self._actions = actions
 
-    def apply(self, state: GameState) -> GameState:
+    def apply(self, s_evolver) -> None:
         for a in self._actions:
-            state = a.apply(state)
-        return state
+            a.apply(s_evolver)
 
     def _description(self) -> str:
         return ', '.join(repr(x) for x in self._actions)
@@ -111,13 +121,10 @@ class PlayCard(Action):
     def __init__(self, card: Card):
         self._card = card
 
-    def apply(self, state: GameState) -> GameState:
-        i = state.sv['i']
-        hand = Hand(state.lp[i].bag.remove(self._card))
-        lp = state.lp.set(i, hand)
-        state = state.set(lp=lp)
-        dp = state.dp.append(self._card)
-        return state.set(dp=dp)
+    def apply(self, s_evolver) -> None:
+        current_player = s_evolver.lp[s_evolver.i].hand
+        s_evolver.lp[s_evolver.i] = Player(current_player.remove(self._card))
+        s_evolver.dp = s_evolver.dp.append(self._card)
 
     def _description(self) -> str:
         return repr(self._card)
@@ -127,16 +134,13 @@ class ChangeVariable(Action):
     def __init__(self, variable: str, action: ActionCallable, description: Optional[str]):
         self._action = action
         self._desc = description if description else 'unknown'
-        self._variable = variable
+        self._var = variable
 
-    def apply(self, state: GameState) -> GameState:
-        sv = state.sv
-        current_val = sv[self._variable]
-        sv = sv.set(self._variable, self._action(current_val))
-        return state.set(sv=sv)
+    def apply(self, s_evolver) -> None:
+        s_evolver[self._var] = self._action(s_evolver[self._var])
 
     def _description(self) -> str:
-        return f'variable={self._variable}, action=<{self._desc}>'
+        return f'variable={self._var}, action=<{self._desc}>'
 
 
 ace_is_zero_cond = VariableCondition('ace', lambda ace: ace == 0, 'ace == 0')
