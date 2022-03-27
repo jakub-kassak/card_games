@@ -143,6 +143,19 @@ class ChangeVariable(Action):
         return f'variable={self._var}, action=<{self._desc}>'
 
 
+class DrawCards(Action):
+    def apply(self, s_evolver) -> None:
+        cards = []
+        for _ in range(s_evolver.cnt):
+            cards.append(s_evolver.st[0])
+            s_evolver.st.delete(0)
+        current_player = s_evolver.lp[s_evolver.i].hand
+        s_evolver.lp[s_evolver.i] = Player(current_player.update(cards))
+
+    def _description(self) -> str:
+        return ''
+
+
 ace_is_zero_cond = VariableCondition('ace', lambda ace: ace == 0, 'ace == 0')
 heart_ix_in_hand_cond = CardInHand(Card(Suit.HEART, Value.IX))
 cond1 = CondAnd(v(ace_is_zero_cond, heart_ix_in_hand_cond))
@@ -150,6 +163,8 @@ cond1 = CondAnd(v(ace_is_zero_cond, heart_ix_in_hand_cond))
 play_heart_ix = PlayCard(Card(Suit.HEART, Value.IX))
 increase_player_index = ChangeVariable('i', lambda x: (x + 1) % 2, '(i + 1) % 2')
 increase_mc = ChangeVariable('mc', lambda x: x + 1, 'mc + 1')
+draw_card = DrawCards()
 action1 = ActionList(v(play_heart_ix, increase_player_index, increase_mc))
 
 move1 = Move(cond1, action1)
+move2 = Move(VariableCondition('cnt', lambda x: True, None), draw_card)
