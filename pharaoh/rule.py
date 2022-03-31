@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Callable, Union, Optional
+from typing import List, Callable, Union, Optional, Any
 
 from pyrsistent import v
 from pyrsistent.typing import PVector
@@ -8,7 +8,7 @@ from pyrsistent.typing import PVector
 from pharaoh.card import Card, Value, Suit
 from pharaoh.game_state import GameState, Player
 
-ConditionCallable = Union[Callable[[Suit], bool], Callable[[Value], bool], Callable[[int], bool]]
+ConditionCallable = Callable[[Union[PVector[Card], PVector[Any], int, Suit, Value]], bool]
 ActionCallable = Union[Callable[[Suit], Suit], Callable[[Value], Value], Callable[[int], int]]
 
 
@@ -18,9 +18,9 @@ class Rule:
 
 
 class Move:
-    def __init__(self, cond: Condition, action: Action):
+    def __init__(self, cond: Condition, actions: PVector[Action]):
         self._cond = cond
-        self._action = action
+        self._actions = actions
 
     def test(self, state: GameState) -> bool:
         return self._cond.test(state)
@@ -33,19 +33,12 @@ class Move:
             raise self.ConditionUnsatisfied
 
         state_evolver = state.evolver()
-        state_evolver.dp = state.dp.evolver()
-        state_evolver.st = state.st.evolver()
-        state_evolver.lp = state.lp.evolver()
-
-        self._action.apply(state_evolver)
-
-        state_evolver.dp = state_evolver.dp.persistent()
-        state_evolver.st = state_evolver.st.persistent()
-        state_evolver.lp = state_evolver.lp.persistent()
+        for a in self._actions:
+            a.apply(state_evolver)
         return state_evolver.persistent()
 
     def __repr__(self) -> str:
-        return f'Move(cond={self._cond}, action={self._action})'
+        return f'Move(cond={self._cond}, actions={self._actions})'
 
 
 class Condition:
@@ -88,7 +81,7 @@ class CardInHand(Condition):
         self._card = card
 
     def test(self, state: GameState) -> bool:
-        return self._card in state.lp[state['i']].hand
+        return self._card in state.lp[state.i].hand
 
     def _description(self) -> str:
         return repr(self._card)
@@ -105,25 +98,13 @@ class Action:
         return f'{self.__class__.__name__}({self._description()})'
 
 
-class ActionList(Action):
-    def __init__(self, actions: PVector[Action]):
-        self._actions = actions
-
-    def apply(self, s_evolver) -> None:
-        for a in self._actions:
-            a.apply(s_evolver)
-
-    def _description(self) -> str:
-        return ', '.join(repr(x) for x in self._actions)
-
-
 class PlayCard(Action):
     def __init__(self, card: Card):
         self._card = card
 
     def apply(self, s_evolver) -> None:
         current_player = s_evolver.lp[s_evolver.i].hand
-        s_evolver.lp[s_evolver.i] = Player(current_player.remove(self._card))
+        s_evolver.lp = s_evolver.lp.set(s_evolver.i, Player(current_player.remove(self._card)))
         s_evolver.dp = s_evolver.dp.append(self._card)
 
     def _description(self) -> str:
@@ -145,12 +126,11 @@ class ChangeVariable(Action):
 
 class DrawCards(Action):
     def apply(self, s_evolver) -> None:
-        cards = []
-        for _ in range(s_evolver.cnt):
-            cards.append(s_evolver.st[0])
-            s_evolver.st.delete(0)
+        cards = s_evolver.st[:s_evolver.cnt]
+        s_evolver.st = s_evolver.st.delete(0, s_evolver.cnt)
         current_player = s_evolver.lp[s_evolver.i].hand
-        s_evolver.lp[s_evolver.i] = Player(current_player.update(cards))
+        current_player = Player(current_player.update(cards))
+        s_evolver.lp = s_evolver.lp.set(s_evolver.i, current_player)
 
     def _description(self) -> str:
         return ''
@@ -164,7 +144,6 @@ play_heart_ix = PlayCard(Card(Suit.HEART, Value.IX))
 increase_player_index = ChangeVariable('i', lambda x: (x + 1) % 2, '(i + 1) % 2')
 increase_mc = ChangeVariable('mc', lambda x: x + 1, 'mc + 1')
 draw_card = DrawCards()
-action1 = ActionList(v(play_heart_ix, increase_player_index, increase_mc))
 
-move1 = Move(cond1, action1)
-move2 = Move(VariableCondition('cnt', lambda x: True, None), draw_card)
+move1 = Move(cond1, v(play_heart_ix, increase_player_index, increase_mc))
+move2 = Move(VariableCondition('cnt', lambda x: True, None), v(draw_card))
