@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import List, Callable, Union, Optional, Any
 
-from pyrsistent import v
-from pyrsistent.typing import PVector
+from pyrsistent import v, b, pbag
+from pyrsistent.typing import PVector, PBag
 
 from pharaoh.card import Card, Value, Suit
 from pharaoh.game_state import GameState, Player
@@ -98,17 +98,17 @@ class Action:
         return f'{self.__class__.__name__}({self._description()})'
 
 
-class PlayCard(Action):
-    def __init__(self, card: Card):
-        self._card = card
+class PlayCards(Action):
+    def __init__(self, cards: PVector[Card]):
+        self._cards = cards
 
     def apply(self, s_evolver) -> None:
-        current_player = s_evolver.lp[s_evolver.i].hand
-        s_evolver.lp = s_evolver.lp.set(s_evolver.i, Player(current_player.remove(self._card)))
-        s_evolver.dp = s_evolver.dp.append(self._card)
+        current_hand = s_evolver.lp[s_evolver.i].hand - pbag(self._cards)
+        s_evolver.lp = s_evolver.lp.set(s_evolver.i, Player(current_hand))
+        s_evolver.dp = s_evolver.dp.extend(self._cards)
 
     def _description(self) -> str:
-        return repr(self._card)
+        return repr(', '.join(map(repr, self._cards)))
 
 
 class ChangeVariable(Action):
@@ -140,7 +140,7 @@ ace_is_zero_cond = VariableCondition('ace', lambda ace: ace == 0, 'ace == 0')
 heart_ix_in_hand_cond = CardInHand(Card(Suit.HEART, Value.IX))
 cond1 = CondAnd(v(ace_is_zero_cond, heart_ix_in_hand_cond))
 
-play_heart_ix = PlayCard(Card(Suit.HEART, Value.IX))
+play_heart_ix = PlayCards(v(Card(Suit.HEART, Value.X), Card(Suit.HEART, Value.IX)))
 increase_player_index = ChangeVariable('i', lambda x: (x + 1) % 2, '(i + 1) % 2')
 increase_mc = ChangeVariable('mc', lambda x: x + 1, 'mc + 1')
 draw_card = DrawCards()
