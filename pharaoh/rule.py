@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import List, Callable, Union, Optional, Any
 
-from pyrsistent import v, b, pbag
-from pyrsistent.typing import PVector, PBag
+from pyrsistent import v, pbag
+from pyrsistent.typing import PVector
 
 from pharaoh.card import Card, Value, Suit, Deck
 from pharaoh.game_state import GameState, Player
@@ -18,12 +18,12 @@ class Rule:
 
 
 class Move:
-    def __init__(self, cond: Condition, actions: PVector[Action]):
-        self._cond = cond
+    def __init__(self, conditions: PVector[Condition], actions: PVector[Action]):
+        self._conds = conditions
         self._actions = actions
 
     def test(self, state: GameState) -> bool:
-        return self._cond.test(state)
+        return all(c.test(state) for c in self._conds)
 
     class ConditionUnsatisfied(Exception):
         pass
@@ -38,7 +38,7 @@ class Move:
         return state_evolver.persistent()
 
     def __repr__(self) -> str:
-        return f'Move(cond={self._cond}, actions={self._actions})'
+        return f'Move(cond={self._conds}, actions={self._actions})'
 
 
 class Condition:
@@ -145,5 +145,5 @@ increase_player_index = ChangeVariable('i', lambda x: (x + 1) % 2, '(i + 1) % 2'
 increase_mc = ChangeVariable('mc', lambda x: x + 1, 'mc + 1')
 draw_card = DrawCards()
 
-move1 = Move(cond1, v(play_heart_ix, increase_player_index, increase_mc))
-move2 = Move(VariableCondition('cnt', lambda x: True, None), v(draw_card))
+move1 = Move(v(cond1), v(play_heart_ix, increase_player_index, increase_mc))
+move2 = Move(v(VariableCondition('cnt', lambda x: True, None)), v(draw_card))
