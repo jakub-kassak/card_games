@@ -36,15 +36,23 @@ Cn is a tuple of cards played during the player's turn, where 1 <= n <= 4. We ca
 for example Cn[0] is the first (bottom) card in the Cn tuple. The notation Cn[val] == v is equivalent to (∀i, 0 <= i <= n): Cn[i][val] == v.
 
 Rules:
-    - (ace == 0 & cnt == 1 & suit == Cn[0][val] & Cn[val] = v)    ->  put Cn into DP
+    # match suit
+    - (ace == 0 & cnt == 1 & suit == Cn[0][suit] & Cn[val] = v)    ->  put Cn into DP
+    # match value
     - (ace == 0 & cnt == 1 & val == Cn[val])   -> put Cn into DP
+    # over goes onto anything
+    - (ace == 0 & cnt == 1 & over == Cn[val])   -> put Cn into DP
+    # everything goes onto (leaves, under)
     - (val == under & suit == leaves & Cn[val] == v)   -> put Cn into DP
+    # only ace can be played after an ace was played
     - (ace == k (1 <= k <= 3) & Cn[val] == ace)   -> put Cn into DP
-    - (ace == 0 & Cn[0] == (leaves, under) & Cn[val] == under)   -> put Cn into DP
-    - ()   ->  draw cnt cards from S
+    # (leaves, under) goes onto everything if ace wasn't played previously
+    - (ace == 0 & Cn[0] == (leaves, under))   -> put Cn into DP
+    # it is always possible to draw cards from stock
+    - ()   ->  draw cnt cards from ST
 
 Game mechanics (occur after the rule is applied)
-    - Cn[val] == ace  ->  ace += n
+    - Cn[val] == ace  ->  ace += n + 1
     - Cn[0] == (leaves, under) -> cnt = 1
     - () ->  ace = max(0, ace - 1)
     - (ace == 0 & Cn == empty)   ->   cnt = 1
@@ -52,7 +60,7 @@ Game mechanics (occur after the rule is applied)
     - Cn[val] != over     ->   suit = Cn[suit]
     - () -> val = Cn[val]
     - Cn[val] == VII  ->  cnt = 3 * N if cnt == 1 else cnt + 3 * n
-    - () -> i = (i + 1) % #LP
+    - len(Cn) != 4  -> i = (i + 1) % #LP
     - () -> mc += 1
 
 			
