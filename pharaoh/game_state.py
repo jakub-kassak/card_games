@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pyrsistent import field, pvector_field, PClass, b
 from pyrsistent.typing import PBag, PVector
 
-from pharaoh.card import Suit, Card, Value, GERMAN_CARDS_DECK
+from pharaoh.card import Suit, Card, Value, GERMAN_CARDS
 
 Pile = PVector[Card]
 
@@ -43,11 +43,11 @@ class GameState(PClass):
         return self.__getattribute__(name)
 
 
-deck = GERMAN_CARDS_DECK[:]
+cards = [*GERMAN_CARDS]
 state1 = GameState(
-    dp=(deck[0],),
-    st=deck[11:],
-    lp=(pl(*deck[1:6]), pl(*deck[6:11])),
+    dp=(cards[0],),
+    st=cards[11:],
+    lp=(pl(*cards[1:6]), pl(*cards[6:11])),
     ace=0,
     suit=Suit.HEART,
     val=Value.VII,

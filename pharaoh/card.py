@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from itertools import product
 from typing import List
 
+from pyrsistent import pvector, pbag
+from pyrsistent.typing import PVector, PBag
+
 
 class Suit(Enum):
     HEART = 1
@@ -37,6 +40,14 @@ class Card:
         return f'({repr(self.suit)}, {repr(self.value)})'
 
 
-SUITS: List[Suit] = [s for s in Suit]
-VALUES: List[Value] = [v for v in Value]
-GERMAN_CARDS_DECK: List[Card] = [Card(s, v) for s, v in product(SUITS, VALUES)]
+@dataclass(frozen=True)
+class Deck:
+    cards: PBag
+    suits: PVector[Suit]
+    values: PVector[Value]
+
+
+SUITS: PVector[Suit] = pvector(s for s in Suit)
+VALUES: PVector[Value] = pvector(v for v in Value)
+GERMAN_CARDS: List[Card] = [Card(s, v) for s, v in product(SUITS, VALUES)]
+GERMAN_CARDS_DECK: Deck = Deck(pbag(GERMAN_CARDS), SUITS, VALUES)

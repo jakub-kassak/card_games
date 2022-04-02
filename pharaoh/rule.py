@@ -5,7 +5,7 @@ from typing import List, Callable, Union, Optional, Any
 from pyrsistent import v, b, pbag
 from pyrsistent.typing import PVector, PBag
 
-from pharaoh.card import Card, Value, Suit
+from pharaoh.card import Card, Value, Suit, Deck
 from pharaoh.game_state import GameState, Player
 
 ConditionCallable = Callable[[Union[PVector[Card], PVector[Any], int, Suit, Value]], bool]
@@ -13,7 +13,7 @@ ActionCallable = Union[Callable[[Suit], Suit], Callable[[Value], Value], Callabl
 
 
 class Rule:
-    def generate_moves(self, deck: List[Card]) -> List[Move]:
+    def generate_moves(self, deck: Deck) -> List[Move]:
         raise NotImplementedError
 
 
