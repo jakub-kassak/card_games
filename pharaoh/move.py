@@ -6,7 +6,7 @@ from pyrsistent import v, pbag
 from pyrsistent.typing import PVector
 
 from pharaoh.card import Card, Value, Suit
-from pharaoh.game_state import GameState, Player
+from pharaoh.game_state import GameState
 
 ConditionCallable = Callable[[Union[PVector[Card], PVector[Any], int, Suit, Value]], bool]
 ActionCallable = Union[Callable[[Suit], Suit], Callable[[Value], Value], Callable[[int], int]]
@@ -76,7 +76,7 @@ class CardInHand(Condition):
         self._card = card
 
     def test(self, state: GameState) -> bool:
-        return self._card in state.lp[state.i].hand
+        return self._card in state.lp[state.i]
 
     def _description(self) -> str:
         return repr(self._card)
@@ -98,8 +98,8 @@ class PlayCards(Action):
         self._cards = cards
 
     def apply(self, s_evolver) -> None:
-        current_hand = s_evolver.lp[s_evolver.i].hand - pbag(self._cards)
-        s_evolver.lp = s_evolver.lp.set(s_evolver.i, Player(current_hand))
+        current_hand = s_evolver.lp[s_evolver.i] - pbag(self._cards)
+        s_evolver.lp = s_evolver.lp.set(s_evolver.i, current_hand)
         s_evolver.dp = s_evolver.dp.extend(self._cards)
 
     def _description(self) -> str:
@@ -123,8 +123,8 @@ class DrawCards(Action):
     def apply(self, s_evolver) -> None:
         cards = s_evolver.st[:s_evolver.cnt]
         s_evolver.st = s_evolver.st.delete(0, s_evolver.cnt)
-        current_player = s_evolver.lp[s_evolver.i].hand
-        current_player = Player(current_player.update(cards))
+        current_player = s_evolver.lp[s_evolver.i]
+        current_player = current_player.update(cards)
         s_evolver.lp = s_evolver.lp.set(s_evolver.i, current_player)
 
     def _description(self) -> str:
@@ -135,10 +135,10 @@ ace_is_zero_cond = VariableCondition('ace', lambda ace: ace == 0, 'ace == 0')
 heart_ix_in_hand_cond = CardInHand(Card(Suit.HEART, Value.IX))
 cond1 = CondAnd(v(ace_is_zero_cond, heart_ix_in_hand_cond))
 
-play_heart_ix = PlayCards(v(Card(Suit.HEART, Value.X), Card(Suit.HEART, Value.IX)))
+play_heart_ix_x = PlayCards(v(Card(Suit.HEART, Value.X), Card(Suit.HEART, Value.IX)))
 increase_player_index = ChangeVariable('i', lambda x: (x + 1) % 2, '(i + 1) % 2')
 increase_mc = ChangeVariable('mc', lambda x: x + 1, 'mc + 1')
 draw_card = DrawCards()
 
-move1 = Move(v(cond1), v(play_heart_ix, increase_player_index, increase_mc))
+move1 = Move(v(cond1), v(play_heart_ix_x, increase_player_index, increase_mc))
 move2 = Move(v(VariableCondition('cnt', lambda x: True, None)), v(draw_card))
