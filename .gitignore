@@ -135,4 +135,4 @@ dmypy.json
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/vcs.xml
 
-pharaoh/__init__.py
+src/pharaoh/__init__.py

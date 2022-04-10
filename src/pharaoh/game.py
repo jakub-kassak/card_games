@@ -1,6 +1,6 @@
 from typing import List, Iterable, Tuple, Optional
 
-from pvectorc import pvector
+from pyrsistent import pvector
 from pyrsistent.typing import PVector
 
 from pharaoh.card import Deck
