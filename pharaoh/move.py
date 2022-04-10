@@ -12,6 +12,10 @@ ConditionCallable = Callable[[Union[PVector[Card], PVector[Any], int, Suit, Valu
 ActionCallable = Union[Callable[[Suit], Suit], Callable[[Value], Value], Callable[[int], int]]
 
 
+class MoveException(Exception):
+    pass
+
+
 class Move:
     def __init__(self, conditions: PVector[Condition], actions: PVector[Action]):
         self._conds = conditions
@@ -20,12 +24,9 @@ class Move:
     def test(self, state: GameState) -> bool:
         return all(c.test(state) for c in self._conds)
 
-    class ConditionUnsatisfied(Exception):
-        pass
-
-    def apply(self, state: GameState):
+    def apply(self, state: GameState) -> GameState:
         if not self.test(state):
-            raise self.ConditionUnsatisfied
+            raise MoveException()
 
         state_evolver = state.evolver()
         for a in self._actions:

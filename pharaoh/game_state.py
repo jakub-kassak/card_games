@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Iterable
+from random import shuffle
+from typing import List, Iterable, Callable
 
 from pyrsistent import field, pvector_field, PClass, pbag
 from pyrsistent.typing import PBag, PVector
 
-from pharaoh.card import Suit, Card, Value, GERMAN_CARDS
+from pharaoh.card import Suit, Card, Value, Deck
 
 Pile = PVector[Card]
 
@@ -41,26 +42,48 @@ class GameState(PClass):
     cnt: int = field(type=int, mandatory=True, invariant=lambda x: (x >= 0, 'draw count must be positive'))
     i: int = field(type=int, mandatory=True, invariant=lambda x: (x >= 0, 'index can not be negative'))
     mc: int = field(type=int, mandatory=True)
+    deck_size: int = field(type=int, mandatory=True)
     __invariant__ = lambda s: ((len(s.dp) > 0, 'discard pile can not be empty'),
                                (len(s.lp) > 1, 'at least 2 players must play'),
                                (s.i < len(s.lp), 'index must be smaller than number of players'),
                                (len(s.lp_mc) == len(s.lp), "size of LP_MC must match size of LP"),
-                               (len(s.st) >= s.cnt, "draw count must be smaller/equal to the size of stock"))
+                               (s.cnt == 0 or len(s.st) > 0 or len(s.dp) == 1, "cnt==0 or len(st)>0 or len(dp)==1"),
+                               (any(x == -1 for x in s.lp_mc), "at least one player must be in game"),
+                               (not s.ace == 0 or s.cnt > 0, 'ace == 0 implies cnt > 0'),
+                               (not s.ace > 0 or s.cnt == 0, 'ace > 0 implies cnt == 0'),
+                               (s.deck_size == sum(map(len, s.lp)) + len(s.dp) + len(s.st), 'card disappeared'))
 
     def __getitem__(self, name: str) -> Pile | PVector | int | Suit | Value:
         return self.__getattribute__(name)
 
-
-cards = [*GERMAN_CARDS]
-state1 = GameState(
-    dp=(cards[0],),
-    st=cards[11:],
-    lp=(Hand(cards[1:6]), Hand(cards[6:11])),
-    ace=0,
-    suit=Suit.HEART,
-    val=Value.VII,
-    cnt=1,
-    i=0,
-    mc=0,
-    lp_mc=(-1, -1)
-)
+    @classmethod
+    def init_state(cls, deck: Deck, player_cnt: int, mix_cards: Callable[[List[Card]], None] = shuffle) -> GameState:
+        cards_list: List[Card] = [*deck.cards]
+        mix_cards(cards_list)
+        top: Card = cards_list.pop()
+        hands: List[List[Card]] = [[] for _ in range(player_cnt)]
+        while len(cards_list) >= 8:
+            for i in range(player_cnt):
+                hands[i].append(cards_list.pop())
+        if top.value == Value.VII:
+            cnt = 3
+            ace = 0
+        elif top.value == Value.ACE:
+            cnt = 0
+            ace = 1
+        else:
+            cnt = 1
+            ace = 0
+        return cls(
+            dp=(top,),
+            st=cards_list,
+            lp=(Hand(h) for h in hands),
+            ace=ace,
+            suit=top.suit,
+            val=top.value,
+            cnt=cnt,
+            i=0,
+            mc=0,
+            lp_mc=(-1,) * player_cnt,
+            deck_size=len(deck.cards)
+        )
