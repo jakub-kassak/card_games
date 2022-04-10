@@ -18,38 +18,64 @@ def partial_permutations(cards: List[Card], size: Optional[int] = None):
             yield perm
 
 
-def ace_was_played(cards: Tuple[Card]) -> Optional[Action]:
+def ace_played(cards: Tuple[Card], _: int) -> List[Action]:
     if cards[0].value == Value.ACE:
-        return ChangeVariable('ace', lambda a1, a2=(len(cards) + 1): a1 + a2, f'ace += {len(cards) + 1}')
-    return None
+        return [ChangeVariable('ace', lambda a1, a2=(len(cards) + 1): a1 + a2, f'ace += {len(cards) + 1}'),
+                ChangeVariable('cnt', lambda _: 0, 'cnt = 0')]
+    return []
 
 
-def leaves_under_as_first(cards: Tuple[Card]) -> Optional[Action]:
+def vii_played(cards: Tuple[Card], _: int) -> List[Action]:
+    if cards[0].value == Value.VII:
+        n = len(cards) * 3
+        return [ChangeVariable('cnt', lambda cnt: n if cnt == 1 else cnt + n, 'cnt = n if cnt == 1 else cnt + n')]
+    return []
+
+
+def leaves_under_played_as_first(cards: Tuple[Card], _: int) -> List[Action]:
     if cards[0].value == Value.UNDER and cards[0].suit == Suit.LEAF:
-        return ChangeVariable('cnt', lambda _: 1, 'cnt = 1')
-    return None
+        return [ChangeVariable('cnt', lambda _: 1, 'cnt = 1')]
+    return []
 
 
-def change_ace_counter(cards: Tuple[Card]) -> Optional[Action]:
-    return ChangeVariable('ace', lambda ace: max(0, ace - 1), 'ace = max(0, ace - 1)')
-
-
-def change_suit_to_top(cards: Tuple[Card]) -> Optional[Action]:
+def change_suit_to_top(cards: Tuple[Card], _: int) -> List[Action]:
     if cards[0].value != Value.OVER:
-        return ChangeVariable('suit', lambda _, s=cards[-1].suit: s, f'suit={cards[-1].suit}')
-    return None
+        return [ChangeVariable('suit', lambda _, s=cards[-1].suit: s, f'suit={cards[-1].suit}')]
+    return []
 
 
-def change_val_to_top(cards: Tuple[Card]) -> Optional[Action]:
-    return ChangeVariable('suit', lambda _, val=cards[-1].value: val, f'suit={cards[-1].value}')
+def change_val_to_top(cards: Tuple[Card], _: int) -> List[Action]:
+    return [ChangeVariable('val', lambda _, val=cards[-1].value: val, f'suit={cards[-1].value}')]
 
 
-game_mechanics_for_played_cards: List[Callable[[Tuple[Card]], Optional[Action]]] = [
-    ace_was_played,
-    leaves_under_as_first,
+def change_ace_counter(_, __) -> List[Action]:
+    return [ChangeVariable('ace', lambda ace: max(0, ace - 1), 'ace = max(0, ace - 1)')]
+
+
+def increment_player_index(cards: Tuple[Card] | Tuple[()], player_count: int) -> List[Action]:
+    if len(cards) < 4:
+        return [ChangeVariable('i', lambda i, pc=player_count: (i + 1) % pc, f'(i + 1) % {player_count}')]
+    return []
+
+
+def increment_move_counter(_, __) -> List[Action]:
+    return [ChangeVariable('mc', lambda mc: mc + 1, "mc += 1")]
+
+
+game_mechanics_for_drawing: List[Callable[[Tuple[Card] | Tuple[()], int], List[Action]]] = [
     change_ace_counter,
+    increment_player_index,
+    increment_move_counter
+]
+game_mechanics_for_played_cards: List[Callable[[Tuple[Card], int], List[Action]]] = [
+    ace_played,
+    vii_played,
+    leaves_under_played_as_first,
     change_suit_to_top,
-    change_val_to_top
+    change_val_to_top,
+    change_ace_counter,
+    increment_player_index,
+    increment_move_counter
 ]
 
 
