@@ -80,7 +80,7 @@ game_mechanics_for_played_cards: List[Callable[[Tuple[Card], int], List[Action]]
 
 
 class Rule:
-    def generate_moves(self, deck: Deck) -> List[Move]:
+    def generate_moves(self, deck: Deck, player_count: int) -> List[Move]:
         raise NotImplementedError
 
 
@@ -93,7 +93,7 @@ class PlayRule(Rule):
         self._cond_generator = cond_generator if cond_generator else lambda _, __: []
         self._size = size
         self._value_filter = value_filter
-        self._move_generator = move_generator if move_generator else lambda c, a, _: [Move(pvector(c), pvector(a))]
+        self._move_generator = move_generator if move_generator else lambda c, a, _: [Move(c, a)]
 
     @staticmethod
     def _sort_deck(deck: Deck) -> Tuple[Dict[Suit, List[Card]], Dict[Value, List[Card]]]:
@@ -104,7 +104,7 @@ class PlayRule(Rule):
             v_dict[card.value].append(card)
         return s_dict, v_dict
 
-    def generate_moves(self, deck: Deck) -> List[Move]:
+    def generate_moves(self, deck: Deck, player_count: int) -> List[Move]:
         s_dict, v_dict = self._sort_deck(deck)
         moves: List[Move] = []
         for val in filter(self._value_filter, deck.values):
@@ -113,8 +113,7 @@ class PlayRule(Rule):
                 conds: List[Condition] = self._cond_generator(suit, val)
                 conds.extend(CardInHand(card) for card in perm)
                 actions: List[Action] = [PlayCards(pvector(perm))]
-                mechanics: Iterator[Optional[Action]] = (m(perm) for m in game_mechanics_for_played_cards)
-                actions.extend(a for a in mechanics if a is not None)
+                actions.extend(a for m in game_mechanics_for_played_cards for a in m(perm, player_count))
                 moves.extend(self._move_generator(conds, actions, deck))
         return moves
 
@@ -124,7 +123,7 @@ def play_over_move_generator(conds: List[Condition], actions: List[Action], deck
     moves = []
     for change in change_suit_list:
         actions.append(change)
-        moves.append(Move(pvector(conds), pvector(actions)))
+        moves.append(Move(conds, actions))
         actions.pop()
     return moves
 
@@ -133,10 +132,10 @@ def f_generator(arg: Suit | Value) -> Callable[[PVector | int | Suit | Value], b
     return lambda a: a == arg
 
 
-regular_state_cond: Condition = CondAnd(v(
+regular_state_conds: List[Condition] = [
         VariableCondition('ace', lambda ace: ace == 0, 'ace == 0'),
         VariableCondition('cnt', lambda cnt: cnt == 1, 'cnt == 1')
-))
+]
 suit_conds: Dict[Suit, Condition] = {
         suit: VariableCondition('suit', f_generator(suit), f'suit=={suit}')
         for suit in Suit
@@ -145,8 +144,8 @@ val_conds: Dict[Value, Condition] = {
         val: VariableCondition('val', f_generator(val), f'val=={val}')
         for val in Value
 }
-match_suit_rule: PlayRule = PlayRule(cond_generator=lambda suit, _: [suit_conds[suit], regular_state_cond])
-match_value_rule: PlayRule = PlayRule(cond_generator=lambda _, val: [val_conds[val], regular_state_cond], size=-1)
-play_over_rule: PlayRule = PlayRule(cond_generator=lambda _, __: [regular_state_cond],
+match_suit_rule: PlayRule = PlayRule(cond_generator=lambda suit, _: [suit_conds[suit]] + regular_state_conds)
+match_value_rule: PlayRule = PlayRule(cond_generator=lambda _, val: [val_conds[val]] + regular_state_conds, size=-1)
+play_over_rule: PlayRule = PlayRule(cond_generator=lambda _, __: regular_state_conds[:],
                                     value_filter=lambda val: val == Value.OVER,
                                     move_generator=play_over_move_generator)
