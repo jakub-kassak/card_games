@@ -26,6 +26,7 @@ def finished(state: GameState) -> bool:
 def winners(state: GameState) -> Optional[List[int]]:
     if not finished(state):
         return None
-    order = list(zip(state.lp_mc, range(1, 10)))
+    final_lp_mc = state.lp_mc.set(state.lp_mc.index(-1), state.mc)
+    order = list(zip(final_lp_mc, range(1, 10)))
     order.sort()
     return [x[1] for x in order]
