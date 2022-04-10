@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Callable, Union, Optional, Any
+from random import shuffle
+from typing import Callable, Union, Optional, Any, Iterable, List, cast
 
-from pyrsistent import v, pbag
+from pyrsistent import v, pbag, pvector
 from pyrsistent.typing import PVector
 
 from pharaoh.card import Card, Value, Suit
@@ -17,9 +18,11 @@ class MoveException(Exception):
 
 
 class Move:
-    def __init__(self, conditions: PVector[Condition], actions: PVector[Action]):
-        self._conds = conditions
-        self._actions = actions
+    def __init__(self, conditions: Iterable[Condition], actions: Iterable[Action],
+                 mix_cards: Callable[[List[Card]], None] = shuffle):
+        self._mix_cards = mix_cards
+        self._conds = pvector(conditions)
+        self._actions = pvector(actions)
 
     def test(self, state: GameState) -> bool:
         return all(c.test(state) for c in self._conds)
@@ -27,11 +30,20 @@ class Move:
     def apply(self, state: GameState) -> GameState:
         if not self.test(state):
             raise MoveException()
-
-        state_evolver = state.evolver()
+        s_evolver = state.evolver()
+        new_state: GameState = cast(GameState, s_evolver)
         for a in self._actions:
-            a.apply(state_evolver)
-        return state_evolver.persistent()
+            a.apply(new_state)
+        while new_state.lp_mc[new_state.i] != -1:
+            new_state.i = (new_state.i + 1) % len(new_state.lp)
+        if new_state.cnt > len(new_state.st):
+            cards: List[Card] = list(new_state.dp[0:-1])
+            self._mix_cards(cards)
+            new_state.st = new_state.st.extend(cards)
+            new_state.dp = new_state.dp.delete(0, -1)
+        if len(new_state.lp[state.i]) == 0:
+            new_state.lp_mc = new_state.lp_mc.set(state.i, new_state.mc)
+        return cast(GameState, s_evolver.persistent())
 
     def __repr__(self) -> str:
         return f'Move(cond={self._conds}, actions={self._actions})'
