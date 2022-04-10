@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from itertools import permutations
-from typing import List, Optional, Tuple, Callable, Dict, Iterator
+from typing import List, Optional, Tuple, Callable, Dict, cast
 
-from pyrsistent import v, pvector
+from pyrsistent import pvector
 from pyrsistent.typing import PVector
 
 from pharaoh.card import Card, Value, Suit, Deck
-from pharaoh.move import Move, Action, ChangeVariable, Condition, CondAnd, VariableCondition, CardInHand, PlayCards
+from pharaoh.move import Move, Action, ChangeVariable, Condition, VariableCondition, CardInHand, PlayCards, DrawCards
+
+
+def raise_(e: Exception):
+    raise e
 
 
 def partial_permutations(cards: List[Card], size: Optional[int] = None):
@@ -19,7 +23,7 @@ def partial_permutations(cards: List[Card], size: Optional[int] = None):
 
 
 def ace_played(cards: Tuple[Card], _: int) -> List[Action]:
-    if cards[0].value == Value.ACE:
+    if cards[0].value == Value.ACE and len(cards) < 4:
         return [ChangeVariable('ace', lambda a1, a2=(len(cards) + 1): a1 + a2, f'ace += {len(cards) + 1}'),
                 ChangeVariable('cnt', lambda _: 0, 'cnt = 0')]
     return []
@@ -84,6 +88,24 @@ class Rule:
         raise NotImplementedError
 
 
+class DrawRule(Rule):
+    def generate_moves(self, deck: Deck, player_count: int) -> List[Move]:
+        moves: List[Move] = []
+        actions: List[Action] = [DrawCards()]
+        actions.extend(a for m in game_mechanics_for_drawing
+                       for a in m(cast(Tuple[()], tuple()), player_count))
+
+        cond_func: Callable = lambda ace: ace > 1 if isinstance(ace, int) \
+            else raise_(TypeError(f'Expected int got {ace.__class__.__name__}'))
+        moves.append(Move([VariableCondition('ace', cond_func, 'ace > 1')], actions))
+
+        actions.append(ChangeVariable('cnt', lambda _: 1, 'cnt = 1'))
+        moves.append(Move([VariableCondition('ace', lambda ace: ace == 0, 'ace == 0')], actions))
+        moves.append(Move([VariableCondition('ace', lambda ace: ace == 1, 'ace == 1')], actions))
+
+        return moves
+
+
 class PlayRule(Rule):
     def __init__(self, cond_generator: Optional[Callable[[Suit, Value], List[Condition]]] = None,
                  size: int = 0,
@@ -133,19 +155,25 @@ def f_generator(arg: Suit | Value) -> Callable[[PVector | int | Suit | Value], b
 
 
 regular_state_conds: List[Condition] = [
-        VariableCondition('ace', lambda ace: ace == 0, 'ace == 0'),
-        VariableCondition('cnt', lambda cnt: cnt == 1, 'cnt == 1')
+    VariableCondition('ace', lambda ace: ace == 0, 'ace == 0'),
+    VariableCondition('cnt', lambda cnt: cnt == 1, 'cnt == 1')
 ]
 suit_conds: Dict[Suit, Condition] = {
-        suit: VariableCondition('suit', f_generator(suit), f'suit=={suit}')
-        for suit in Suit
+    suit: VariableCondition('suit', f_generator(suit), f'suit=={suit}')
+    for suit in Suit
 }
 val_conds: Dict[Value, Condition] = {
-        val: VariableCondition('val', f_generator(val), f'val=={val}')
-        for val in Value
+    val: VariableCondition('val', f_generator(val), f'val=={val}')
+    for val in Value
 }
 match_suit_rule: PlayRule = PlayRule(cond_generator=lambda suit, _: [suit_conds[suit]] + regular_state_conds)
 match_value_rule: PlayRule = PlayRule(cond_generator=lambda _, val: [val_conds[val]] + regular_state_conds, size=-1)
 play_over_rule: PlayRule = PlayRule(cond_generator=lambda _, __: regular_state_conds[:],
                                     value_filter=lambda val: val == Value.OVER,
                                     move_generator=play_over_move_generator)
+standard_ruleset: List[Rule] = [
+    match_suit_rule,
+    match_value_rule,
+    play_over_rule,
+    DrawRule()
+]
