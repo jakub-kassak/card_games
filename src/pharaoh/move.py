@@ -23,6 +23,16 @@ class Move:
         self._mix_cards = mix_cards
         self._conds = pvector(conditions)
         self._actions = pvector(actions)
+        for a in actions:
+            if isinstance(a, PlayCards):
+                self._cards: PVector[Card] = a.cards
+                break
+        else:
+            self._cards: PVector[Card] = pvector()
+
+    @property
+    def cards(self) -> PVector[Card]:
+        return self._cards
 
     def test(self, state: GameState) -> bool:
         return all(c.test(state) for c in self._conds)
@@ -109,6 +119,10 @@ class Action:
 class PlayCards(Action):
     def __init__(self, cards: PVector[Card]):
         self._cards = cards
+
+    @property
+    def cards(self) -> PVector[Card]:
+        return self._cards
 
     def apply(self, s_evolver) -> None:
         current_hand = s_evolver.lp[s_evolver.i] - pbag(self._cards)
