@@ -28,7 +28,7 @@ class Move:
                 self._cards: PVector[Card] = a.cards
                 break
         else:
-            self._cards: PVector[Card] = pvector()
+            self._cards = pvector()
 
     @property
     def cards(self) -> PVector[Card]:
