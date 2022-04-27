@@ -1,0 +1,28 @@
+players:
+  names:
+    - jakub
+    - computer1
+    - computer2
+    - random1
+  types:
+    - ai2
+    - ai1
+    - ai2
+    - random
+init_cards: 5
+symbols:
+  HEART: "🧡"
+  BELL: "🟡"
+  ACORN: "♧"
+  LEAF: "🍂"
+  VII: "7"
+  VIII: "8"
+  IX: "9"
+  X: "10"
+  UNDER: "⛛"
+  OVER: "🔺"
+  KING: "👑"
+  ACE: "A"
+  prefix: ""
+  suffix: ""
+  delimiter: ""
