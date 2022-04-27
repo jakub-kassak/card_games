@@ -1,23 +1,26 @@
-from enum import Enum
+from enum import IntEnum
 from dataclasses import dataclass
 from itertools import product
-from typing import List
+from typing import List, Dict
 
 from pyrsistent import pvector, pbag
 from pyrsistent.typing import PVector, PBag
 
 
-class Suit(Enum):
+class Suit(IntEnum):
     HEART = 1
     BELL = 2
     ACORN = 3
     LEAF = 4
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
 
+    def __str__(self) -> str:
+        return symbols[self.name]
 
-class Value(Enum):
+
+class Value(IntEnum):
     VII = 7
     VIII = 8
     IX = 9
@@ -27,17 +30,23 @@ class Value(Enum):
     KING = 13
     ACE = 14
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
 
+    def __str__(self) -> str:
+        return symbols[self.name]
 
-@dataclass(frozen=True)
+
+@dataclass(frozen=True, order=True)
 class Card:
     suit: Suit
     value: Value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'({repr(self.suit)}, {repr(self.value)})'
+
+    def __str__(self) -> str:
+        return f'{symbols["prefix"]}{self.suit}{symbols["delimiter"]}{self.value}{symbols["suffix"]}'
 
 
 @dataclass(frozen=True)
@@ -46,6 +55,9 @@ class Deck:
     suits: PVector[Suit]
     values: PVector[Value]
 
+
+symbols: Dict[str, str] = {s.name: s.name for s in Suit} | {v.name: v.name for v in Value} | {
+    "prefix": "(", "suffix": ")", "delimiter": ", "}
 
 SUITS: PVector[Suit] = pvector(s for s in Suit)
 VALUES: PVector[Value] = pvector(v for v in Value)
