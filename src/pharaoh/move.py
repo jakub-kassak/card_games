@@ -18,9 +18,9 @@ class MoveException(Exception):
 
 
 class Move:
-    def __init__(self, conditions: Iterable[Condition], actions: Iterable[Action],
-                 mix_cards: Callable[[List[Card]], None] = shuffle):
-        self._mix_cards = mix_cards
+    mix_cards: Callable[[List[Card]], None] = shuffle
+
+    def __init__(self, conditions: Iterable[Condition], actions: Iterable[Action], suit: Optional[Suit] = None):
         self._conds = pvector(conditions)
         self._actions = pvector(actions)
         for a in actions:
@@ -29,10 +29,17 @@ class Move:
                 break
         else:
             self._cards = pvector()
+        if suit is None and self._cards:
+            suit = self._cards[-1].suit
+        self._suit: Optional[Suit] = suit
 
     @property
     def cards(self) -> PVector[Card]:
         return self._cards
+
+    @property
+    def suit(self) -> Optional[Suit]:
+        return self._suit
 
     def test(self, state: GameState) -> bool:
         return all(c.test(state) for c in self._conds)
@@ -48,7 +55,7 @@ class Move:
             new_state.i = (new_state.i + 1) % len(new_state.lp)
         if new_state.cnt > len(new_state.st):
             cards: List[Card] = list(new_state.dp[0:-1])
-            self._mix_cards(cards)
+            self.__class__.mix_cards(cards)
             new_state.st = new_state.st.extend(cards)
             new_state.dp = new_state.dp.delete(0, -1)
         if len(new_state.lp[state.i]) == 0:

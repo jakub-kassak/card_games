@@ -141,11 +141,11 @@ class PlayRule(Rule):
 
 
 def play_over_move_generator(conds: List[Condition], actions: List[Action], deck: Deck) -> List[Move]:
-    change_suit_list = [ChangeVariable('suit', lambda _, s=suit: s, f'suit={suit}') for suit in deck.suits]
+    change_suit_vars = {suit: ChangeVariable('suit', lambda _, s=suit: s, f'suit={repr(suit)}') for suit in deck.suits}
     moves = []
-    for change in change_suit_list:
-        actions.append(change)
-        moves.append(Move(conds, actions))
+    for suit, change_var in change_suit_vars.items():
+        actions.append(change_var)
+        moves.append(Move(conds, actions, suit=suit))
         actions.pop()
     return moves
 
