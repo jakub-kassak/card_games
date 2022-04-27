@@ -34,7 +34,7 @@ def play_game(state: GameState, players: PVector[Player], moves: PVector[Move]) 
 
 def main():
     n = 5
-    players: PVector[Player] = pvector(RandomPlayer() for _ in range(5))
+    players: PVector[Player] = pvector(RandomPlayer(str(i)) for i in range(5))
     state, moves = create_game(standard_ruleset, GERMAN_CARDS_DECK, n)
     state_history, move_history = play_game(state, players, moves)
     for i in range(len(state_history)):
@@ -44,16 +44,16 @@ def main():
 
 def main2():
     n = 6
-    players: PVector[Player] = pvector(RandomPlayer() for _ in range(2))
-    players = players.extend(BiggestTuplePlayer() for _ in range(2))
-    players = players.extend(SmallestTuplePlayer() for _ in range(2))
+    players: PVector[Player] = pvector(RandomPlayer('random' + str(i)) for i in range(2))
+    players = players.extend(BiggestTuplePlayer('biggest' + str(i)) for i in range(2))
+    players = players.extend(SmallestTuplePlayer('smallest' + str(i)) for i in range(2))
 
     stats = [0] * n
     length = 0
     m = 200
     players_numbers = [(players[i], i) for i in range(n)]
     for j in range(m):
-        if j % 10 == 9:
+        if j > 0 and j % 10 == 0:
             print(j)
         shuffle(players_numbers)
         positions = [0] * n
@@ -63,7 +63,7 @@ def main2():
         players2 = pvector(x[0] for x in players_numbers)
         state, moves = create_game(standard_ruleset, GERMAN_CARDS_DECK, n)
         state_history, move_history = play_game(state, players2, moves)
-        result = [x-1 for x in winners(state_history[-1])]
+        result = [x - 1 for x in winners(state_history[-1])]
         for i in range(n):
             stats[positions[result[i]]] += i
         length += state_history[-1].mc

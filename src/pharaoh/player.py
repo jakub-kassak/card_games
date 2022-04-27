@@ -8,7 +8,14 @@ from pharaoh.move import Move
 
 
 class Player:
-    def play(self, round_history: List[GameState], legal_moves: List[Move]) -> Move:
+    def __init__(self, name: str):
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def play(self, state: GameState, legal_moves: List[Move]) -> Move:
         raise NotImplementedError
 
     @staticmethod
@@ -20,17 +27,17 @@ class Player:
 
 
 class RandomPlayer(Player):
-    def play(self, round_history: List[GameState], legal_moves: List[Move]) -> Move:
+    def play(self, state: GameState, legal_moves: List[Move]) -> Move:
         return random.choice(legal_moves)
 
 
 class BiggestTuplePlayer(Player):
-    def play(self, round_history: List[GameState], legal_moves: List[Move]) -> Move:
+    def play(self, state: GameState, legal_moves: List[Move]) -> Move:
         return max(legal_moves, key=lambda m: len(m.cards))
 
 
 class SmallestTuplePlayer(Player):
-    def play(self, round_history: List[GameState], legal_moves: List[Move]) -> Move:
+    def play(self, state: GameState, legal_moves: List[Move]) -> Move:
         if len(legal_moves) == 1:
             return legal_moves[0]
         legal_moves = [m for m in legal_moves if len(m.cards)]
