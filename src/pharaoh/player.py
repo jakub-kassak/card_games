@@ -1,8 +1,11 @@
+import itertools
 import random
 from collections import defaultdict
-from typing import List, Callable, Dict
+from typing import List, Callable, Dict, Optional, Tuple
 
-from pharaoh.card import Value
+from pyrsistent.typing import PVector
+
+from pharaoh.card import Value, Card, Suit
 from pharaoh.game_state import GameState
 from pharaoh.move import Move
 
@@ -18,12 +21,8 @@ class Player:
     def play(self, state: GameState, legal_moves: List[Move]) -> Move:
         raise NotImplementedError
 
-    @staticmethod
-    def _description():
-        return ''
-
     def __repr__(self):
-        return f'{self.__class__.__name__}({self._description()})'
+        return f'{self.__class__.__name__}(name={self.name})'
 
 
 class RandomPlayer(Player):
@@ -48,3 +47,16 @@ class SmallestTuplePlayer(Player):
                 values[c.value] = max(values[c.value], size)
         move = min(legal_moves, key=lambda mv: (values[mv.cards[0].value], -len(mv.cards)))
         return move
+
+
+class HumanPlayer(Player):
+    def __init__(self, name: str, load_move: Callable[[int], Tuple[PVector[Card], Optional[Suit]]]):
+        super().__init__(name)
+        self._load_move = load_move
+
+    def play(self, state: GameState, legal_moves: List[Move]) -> Move:
+        for i in itertools.count():
+            cards_list, suit = self._load_move(i)
+            moves2 = list(mv for mv in legal_moves if mv.cards == cards_list and mv.suit == suit)
+            return moves2[0]
+        raise Exception()
