@@ -27,6 +27,9 @@ class Hand:
     def __len__(self):
         return len(self._bag)
 
+    def __iter__(self):
+        return self._bag.__iter__()
+
     def __repr__(self):
         return f'{self.__class__.__name__}({", ".join(str(x) for x in self._bag)})'
 
@@ -51,19 +54,23 @@ class GameState(PClass):
                                (any(x == -1 for x in s.lp_mc), "at least one player must be in game"),
                                (not s.ace == 0 or s.cnt > 0, 'ace == 0 implies cnt > 0'),
                                (not s.ace > 0 or s.cnt == 0, 'ace > 0 implies cnt == 0'),
-                               (s.deck_size == sum(map(len, s.lp)) + len(s.dp) + len(s.st), 'card disappeared'))
+                               (s.deck_size == sum(map(len, s.lp)) + len(s.dp) + len(s.st), 'card disappeared'),
+                               (s.lp_mc[s.i] == -1, 'finished player is on the move'))
 
     def __getitem__(self, name: str) -> Pile | PVector | int | Suit | Value:
         return self.__getattribute__(name)
 
     @classmethod
-    def init_state(cls, deck: Deck, player_cnt: int, mix_cards: Callable[[List[Card]], None] = shuffle) -> GameState:
+    def init_state(cls, deck: Deck, player_cnt: int, init_cards: int,
+                   mix_cards: Callable[[List[Card]], None] = shuffle) -> GameState:
         cards_list: List[Card] = [*deck.cards]
         mix_cards(cards_list)
         top: Card = cards_list.pop()
         hands: List[List[Card]] = [[] for _ in range(player_cnt)]
-        while len(cards_list) >= 8:
-            for i in range(player_cnt):
+        for i in range(player_cnt):
+            for _ in range(init_cards):
+                if len(cards_list) == 0:
+                    raise Exception("not enough cards for everyone")
                 hands[i].append(cards_list.pop())
         if top.value == Value.VII:
             cnt = 3
