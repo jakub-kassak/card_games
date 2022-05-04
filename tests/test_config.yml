@@ -1,0 +1,14 @@
+players:
+  names:
+    - pc1
+    - pc2
+    - pc3
+    - pc4
+    - pc5
+  types:
+    - random
+    - random
+    - random
+    - random
+    - random
+init_cards: 5
