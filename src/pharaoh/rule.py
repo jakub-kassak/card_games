@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import permutations
-from typing import List, Optional, Tuple, Callable, Dict, cast
+from typing import List, Optional, Tuple, Callable, Dict, cast, Iterator
 
 from pyrsistent import pvector
 from pyrsistent.typing import PVector
@@ -14,17 +14,17 @@ def raise_(e: Exception):
     raise e
 
 
-def partial_permutations(cards: List[Card], size: Optional[int] = None):
-    if size is None:
-        size = len(cards)
+def partial_permutations(cards: List[Card], size: Optional[int] = None) -> Iterator[Tuple[Card]]:
+    size = size if size else len(cards)
     for i in range(size):
         for perm in permutations(cards, i + 1):
-            yield perm
+            yield cast(Tuple[Card], perm)
 
 
 def ace_played(cards: Tuple[Card], _: int) -> List[Action]:
     if cards[0].value == Value.ACE and len(cards) < 4:
-        return [ChangeVariable('ace', lambda a1, a2=(len(cards) + 1): a1 + a2, f'ace += {len(cards) + 1}'),
+        return [ChangeVariable('ace', lambda ace, n=len(cards): ace + n - (ace != 0),
+                               f'ace += ace + {len(cards)} - (ace!=0)'),
                 ChangeVariable('cnt', lambda _: 0, 'cnt = 0')]
     return []
 
@@ -52,7 +52,9 @@ def change_val_to_top(cards: Tuple[Card], _: int) -> List[Action]:
     return [ChangeVariable('val', lambda _, val=cards[-1].value: val, f'suit={cards[-1].value}')]
 
 
-def change_ace_counter(_, __) -> List[Action]:
+def change_ace_counter(cards: Tuple[Card] | Tuple[()], __) -> List[Action]:
+    if cards and cards[0].value == Value.ACE:
+        return []
     return [ChangeVariable('ace', lambda ace: max(0, ace - 1), 'ace = max(0, ace - 1)')]
 
 
@@ -154,10 +156,8 @@ def f_generator(arg: Suit | Value) -> Callable[[PVector | int | Suit | Value], b
     return lambda a: a == arg
 
 
-regular_state_conds: List[Condition] = [
-    VariableCondition('ace', lambda ace: ace == 0, 'ace == 0'),
-    VariableCondition('cnt', lambda cnt: cnt == 1, 'cnt == 1')
-]
+ace_is_zero: Condition = VariableCondition('ace', lambda ace: ace == 0, 'ace == 0')
+cnt_is_one: Condition = VariableCondition('cnt', lambda cnt: cnt == 1, 'cnt == 1')
 suit_conds: Dict[Suit, Condition] = {
     suit: VariableCondition('suit', f_generator(suit), f'suit=={suit}')
     for suit in Suit
@@ -166,11 +166,25 @@ val_conds: Dict[Value, Condition] = {
     val: VariableCondition('val', f_generator(val), f'val=={val}')
     for val in Value
 }
-match_suit_rule: PlayRule = PlayRule(cond_generator=lambda suit, _: [suit_conds[suit]] + regular_state_conds)
-match_value_rule: PlayRule = PlayRule(cond_generator=lambda _, val: [val_conds[val]] + regular_state_conds, size=-1)
-play_over_rule: PlayRule = PlayRule(cond_generator=lambda _, __: regular_state_conds[:],
-                                    value_filter=lambda val: val == Value.OVER,
-                                    move_generator=play_over_move_generator)
+
+
+def cond_generator_for_state_check(value: Value) -> List[Condition]:
+    if value == Value.VII:
+        return [ace_is_zero]
+    if value == Value.ACE:
+        return [VariableCondition('cnt', lambda cnt: cnt == 1 or cnt == 0, 'cnt <= 1')]
+    return [ace_is_zero, cnt_is_one]
+
+
+match_suit_rule: PlayRule = PlayRule(
+    cond_generator=lambda suit, val: [suit_conds[suit]] + cond_generator_for_state_check(val))
+match_value_rule: PlayRule = PlayRule(
+    cond_generator=lambda _, val: [val_conds[val]] + cond_generator_for_state_check(val),
+    size=-1)
+play_over_rule: PlayRule = PlayRule(
+    cond_generator=lambda _, __: [ace_is_zero, cnt_is_one],
+    value_filter=lambda val: val == Value.OVER,
+    move_generator=play_over_move_generator)
 standard_ruleset: List[Rule] = [
     match_suit_rule,
     match_value_rule,
