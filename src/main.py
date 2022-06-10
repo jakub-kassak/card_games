@@ -9,18 +9,26 @@ from pharaoh.card import GERMAN_CARDS_DECK, Card, Suit, Value, symbols
 from pharaoh.game import finished, legal_moves, create_game, winners
 from pharaoh.game_state import GameState
 from pharaoh.move import Move
-from pharaoh.player import Player, RandomPlayer, BiggestTuplePlayer, SmallestTuplePlayer, HumanPlayer
+from pharaoh.player import Player, RandomPlayer, BiggestTuplePlayer, SmallestTuplePlayer, HumanPlayer, MCTSPlayer
 from pharaoh.rule import standard_ruleset
 
 
-cursor: str = '\033[32m>>>\033[m '
+CURSOR: str = '\033[32m>>>\033[m '
+
+
+class ConsoleGameException(Exception):
+    pass
+
+
+class EndGame(Exception):
+    pass
 
 
 class ConsoleGame:
     def __init__(self, config: str = "config/config.yml"):
         self._players: List[Player] = []
         self._states: List[GameState] = []
-        self._allowed_moves: List[Move] = []
+        self._allowed_moves: Iterable[Move] = []
         self._moves_history: List[Move] = []
         self._config_file = config
 
@@ -61,7 +69,7 @@ class ConsoleGame:
             "leaf": Suit.LEAF
         }
         while True:
-            suit = input(f"Enter suit to which you want to change:\n{cursor}")
+            suit = input(f"Enter suit to which you want to change:\n{CURSOR}")
             if suit in table:
                 return table[suit]
             elif suit == "help":
@@ -80,7 +88,7 @@ class ConsoleGame:
         else:
             print('Entered combination is invalid, enter valid combination of cards.')
         while True:
-            command = input(cursor).split()
+            command = input(CURSOR).split()
             if len(command) == 0:
                 continue
             elif command[0] == 'play':
@@ -91,9 +99,10 @@ class ConsoleGame:
                         return cards_list, self._load_suit_from_console()
                     else:
                         return cards_list, cards_list[-1].suit
-                except Exception as e:
-                    print(e)
+                except ValueError:
                     print('you have entered incorrect numbers')
+                except IndexError:
+                    print('please enter at least one number')
             elif command[0] == "draw" or command[0] == "skip":
                 return pvector(), None
             elif command[0] == "enemies":
@@ -107,7 +116,7 @@ class ConsoleGame:
             elif command[0] == "help":
                 pass
             elif command[0] == 'end':
-                raise Exception("End game")
+                raise EndGame("Player wants to end the game")
             else:
                 print("unknown command")
 
@@ -119,9 +128,13 @@ class ConsoleGame:
             symbols.update(config["symbols"])
         names = config["players"]["names"]
         types = config["players"]["types"]
+        init_cards: int = config["init_cards"]
+        state, self._allowed_moves = create_game(standard_ruleset, GERMAN_CARDS_DECK, len(names), init_cards)
+        self._states = [state]
+        self._moves_history = []
         for name, type_ in zip(names, types):
             if len(self._players) > 6:
-                raise Exception("too many players")
+                raise ConsoleGameException("too many players")
             if type_ == 'human':
                 self._players.append(HumanPlayer(name, self._load_move_from_console))
             elif type_ == 'random':
@@ -131,13 +144,9 @@ class ConsoleGame:
             elif type_ == 'ai2':
                 self._players.append(SmallestTuplePlayer(name))
             else:
-                raise Exception("Unsupported player type")
+                raise ConsoleGameException("Unsupported player type")
         if len(self._players) < 2:
-            raise Exception("not enough players")
-        init_cards: int = config["init_cards"]
-        state, self._allowed_moves = create_game(standard_ruleset, GERMAN_CARDS_DECK, len(self._players), init_cards)
-        self._states = [state]
-        self._moves_history = []
+            raise ConsoleGameException("not enough players")
 
     def play_game(self) -> Tuple[List[GameState], List[Move]]:
         self._print_top_card()
@@ -169,9 +178,9 @@ class ConsoleGame:
 
     def main(self):
         print("## CONSOLE PHARAOH ##")
-        print(f"enter your commands behind '{cursor[:-1]}'")
+        print(f"enter your commands behind '{CURSOR[:-1]}'")
         while True:
-            command = input(cursor).split()
+            command = input(CURSOR).split()
             if len(command) == 0:
                 continue
             elif command[0] == 'play':
@@ -179,8 +188,8 @@ class ConsoleGame:
                 try:
                     self.play_game()
                     self.game_results()
-                except Exception as e:
-                    print(e)
+                except EndGame:
+                    pass
             elif command[0] == 'help':
                 print('enter "play", to start the game')
                 print('enter "end", to end the game')
