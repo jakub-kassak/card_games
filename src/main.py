@@ -1,5 +1,5 @@
 from random import shuffle
-from typing import Tuple, List, Optional, Dict
+from typing import Tuple, List, Optional, Dict, Iterable
 
 import yaml
 from pyrsistent import pvector
@@ -143,6 +143,8 @@ class ConsoleGame:
                 self._players.append(BiggestTuplePlayer(name))
             elif type_ == 'ai2':
                 self._players.append(SmallestTuplePlayer(name))
+            elif type_ == 'mcts':
+                self._players.append(MCTSPlayer(name, self._allowed_moves, state))
             else:
                 raise ConsoleGameException("Unsupported player type")
         if len(self._players) < 2:
@@ -166,6 +168,8 @@ class ConsoleGame:
                 print(f'{name}: PLAY {", ".join(str(c) for c in next_move.cards)}')
             i = self._current_state.i
             self._states.append(next_move.apply(self._current_state))
+            for player in self._players:
+                player.inform(next_move)
             if len(self._current_state.lp[i]) == 0:
                 print(f'{name} finished.')
         return self._states, self._moves_history

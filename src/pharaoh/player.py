@@ -1,12 +1,14 @@
 import itertools
 import random
 from collections import defaultdict
-from typing import List, Callable, Dict, Optional, Tuple
+from collections import deque
+from typing import List, Callable, Dict, Optional, Tuple, Iterable, Deque
 
 from pyrsistent.typing import PVector
 
 from pharaoh.card import Value, Card, Suit
 from pharaoh.game_state import GameState
+from pharaoh.mcts import MCTS
 from pharaoh.move import Move
 
 
@@ -20,6 +22,9 @@ class Player:
 
     def play(self, state: GameState, legal_moves: List[Move]) -> Move:
         raise NotImplementedError
+
+    def inform(self, move: Move) -> None:
+        pass
 
     def __repr__(self):
         return f'{self.__class__.__name__}(name={self.name})'
@@ -58,5 +63,27 @@ class HumanPlayer(Player):
         for i in itertools.count():
             cards_list, suit = self._load_move(i)
             moves2 = list(mv for mv in legal_moves if mv.cards == cards_list and mv.suit == suit)
-            return moves2[0]
+            if moves2:
+                return moves2[0]
         raise Exception()
+
+
+class MCTSPlayer(Player):
+    def __init__(self, name: str, moves: Iterable[Move], init_state: GameState):
+        super().__init__(name)
+        self._moves = moves
+        self._unprocessed_moves: Deque[Move] = deque()
+        self._mcts = MCTS(init_state, self._moves)
+        self._mcts.search()
+
+    def play(self, state: GameState, legal_moves: Iterable[Move]) -> Move:
+        while self._unprocessed_moves and (move := self._unprocessed_moves.pop()):
+            if not self._mcts.advance(move):
+                break
+        if self._unprocessed_moves:
+            self._unprocessed_moves.clear()
+            self._mcts.set_root(state)
+        return self._mcts.search()
+
+    def inform(self, move: Move) -> None:
+        self._unprocessed_moves.appendleft(move)
