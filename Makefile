@@ -9,7 +9,7 @@ run:
 test:
 	@echo '### mypy results ###'
 	@mypy --python-version=3.10 $(SRC)
-	@echo
-	@echo "### tests results ###"
-	@export PYTHONPATH=$PWD/$(SRC)
-	@cd $(TEST_SRC) && python3.10 -m unittest discover -v .
+	@printf "\n### tests results ###\n"
+	@export PYTHONPATH="$(PWD)/$(SRC)" \
+	 && cd $(TEST_SRC) \
+	 && python3.10 -m unittest discover -v .
