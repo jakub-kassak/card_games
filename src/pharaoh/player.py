@@ -1,8 +1,7 @@
 import itertools
 import random
 from collections import defaultdict
-from collections import deque
-from typing import List, Callable, Dict, Optional, Tuple, Iterable, Deque
+from typing import List, Callable, Dict, Optional, Tuple, Iterable
 
 from pyrsistent.typing import PVector
 
@@ -22,9 +21,6 @@ class Player:
 
     def play(self, state: GameState, legal_moves: List[Move]) -> Move:
         raise NotImplementedError
-
-    def inform(self, move: Move) -> None:
-        pass
 
     def __repr__(self):
         return f'{self.__class__.__name__}(name={self.name})'
@@ -69,21 +65,10 @@ class HumanPlayer(Player):
 
 
 class MCTSPlayer(Player):
-    def __init__(self, name: str, moves: Iterable[Move], init_state: GameState):
+    def __init__(self, name: str, moves: Iterable[Move]):
         super().__init__(name)
         self._moves = moves
-        self._unprocessed_moves: Deque[Move] = deque()
-        self._mcts = MCTS(init_state, self._moves)
-        self._mcts.search()
 
     def play(self, state: GameState, legal_moves: Iterable[Move]) -> Move:
-        while self._unprocessed_moves and (move := self._unprocessed_moves.pop()):
-            if not self._mcts.advance(move):
-                break
-        if self._unprocessed_moves:
-            self._unprocessed_moves.clear()
-            self._mcts.set_root(state)
-        return self._mcts.search()
-
-    def inform(self, move: Move) -> None:
-        self._unprocessed_moves.appendleft(move)
+        mcts: MCTS = MCTS(state, self._moves)
+        return mcts.search()

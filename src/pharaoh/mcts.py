@@ -74,17 +74,6 @@ class MCTS:
         self._root = Node(state, None, None)
         self._moves = moves
 
-    def advance(self, move: Move) -> bool:
-        next_root = list(child for child in self._root.children if child.move == move)
-        if not next_root:
-            return False
-        self._root = next_root[0]
-        self._root.parent = None
-        return True
-
-    def set_root(self, state: GameState):
-        self._root = Node(state, None, None)
-
     def search(self) -> Move:
         if len(legal_moves(self._root.state, self._moves)) == 1:
             return legal_moves(self._root.state, self._moves)[0]
@@ -123,7 +112,7 @@ class MCTS:
 
     def _best_move(self) -> Move:
         best_node: Node = max(self._root.children, key=lambda node: node.visits)
-        print(f'best: {best_node.wins}, all: {list(node.wins for node in self._root.children)}')
+        # print(f'best: {best_node.wins}, all: {list(node.wins for node in self._root.children)}')
         if best_node.move is None:
             raise MonteCarloException("Node's move is None")
         return best_node.move
