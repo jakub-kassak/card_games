@@ -5,7 +5,7 @@ players:
     - computer2
     - random1
   types:
-    - ai2
+    - human
     - ai1
     - ai2
     - random
@@ -23,6 +23,6 @@ symbols:
   OVER: "🔺"
   KING: "👑"
   ACE: "A"
-  prefix: ""
-  suffix: ""
-  delimiter: ""
+  __PREFIX__: ""
+  __SUFFIX__: ""
+  __DELIMITER__: ""

@@ -46,7 +46,7 @@ class Card:
         return f'({repr(self.suit)}, {repr(self.value)})'
 
     def __str__(self) -> str:
-        return f'{symbols["prefix"]}{self.suit}{symbols["delimiter"]}{self.value}{symbols["suffix"]}'
+        return f'{symbols["__PREFIX__"]}{self.suit}{symbols["__DELIMITER__"]}{self.value}{symbols["__SUFFIX__"]}'
 
 
 @dataclass(frozen=True)
@@ -57,7 +57,7 @@ class Deck:
 
 
 symbols: Dict[str, str] = {s.name: s.name for s in Suit} | {v.name: v.name for v in Value} | {
-    "prefix": "(", "suffix": ")", "delimiter": ", "}
+    "__PREFIX__": "(", "__SUFFIX__": ")", "__DELIMITER__": ", "}
 
 SUITS: PVector[Suit] = pvector(s for s in Suit)
 VALUES: PVector[Value] = pvector(v for v in Value)

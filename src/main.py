@@ -12,8 +12,8 @@ from pharaoh.move import Move
 from pharaoh.player import Player, RandomPlayer, BiggestTuplePlayer, SmallestTuplePlayer, HumanPlayer, MCTSPlayer
 from pharaoh.rule import standard_ruleset
 
-
 CURSOR: str = '\033[32m>>>\033[m '
+EMPTY_STR: str = '""'
 
 
 class ConsoleGameException(Exception):
@@ -105,7 +105,7 @@ class ConsoleGame:
                     print('please enter at least one number')
             elif command[0] == "draw" or command[0] == "skip":
                 return pvector(), None
-            elif command[0] == "enemies":
+            elif command[0] == "status":
                 player_stats = (f'{self._players[j].name}: {len(self._current_state.lp[j])}'
                                 for j in range(len(self._players)))
                 print(", ".join(player_stats))
@@ -114,7 +114,15 @@ class ConsoleGame:
             elif command[0] == "hand" or command[0] == "cards":
                 self._print_cards(hand)
             elif command[0] == "help":
-                pass
+                print("enter 'play ' number for each card you want to play (e.g. 'play 1 4 2')")
+                print("enter 'draw' to draw cards")
+                print("enter 'status' to see, how many cards each player has")
+                print("enter 'top' to show the top card")
+                print("enter 'hand' to see your cards")
+                print("table of symbols:")
+                for key, value in symbols.items():
+                    if key not in ("__PREFIX__", "__SUFFIX__", "__DELIMITER__"):
+                        print(f"\t{key} = {value if value else EMPTY_STR}")
             elif command[0] == 'end':
                 raise EndGame("Player wants to end the game")
             else:
@@ -196,11 +204,11 @@ class ConsoleGame:
                     pass
             elif command[0] == 'help':
                 print('enter "play", to start the game')
-                print('enter "end", to end the game')
+                print('enter "exit", to exit the game')
                 print('enter "rules", to view game rules')
             elif command[0] == 'rules':
-                pass
-            elif command[0] == 'end':
+                print('unfortunately, this feature has not yet been implemented')
+            elif command[0] == 'exit':
                 return
             else:
                 print("unknown command")
