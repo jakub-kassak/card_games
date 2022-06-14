@@ -102,7 +102,10 @@ class ConsoleGame:
                 except ValueError:
                     print('you have entered incorrect numbers')
                 except IndexError:
-                    print('please enter at least one number')
+                    if len(command) == 1:
+                        print('please enter at least one number')
+                    else:
+                        print(f'invalid number, please enter number in range [0, {len(hand)})')
             elif command[0] == "draw" or command[0] == "skip":
                 return pvector(), None
             elif command[0] == "status":
@@ -114,7 +117,7 @@ class ConsoleGame:
             elif command[0] == "hand" or command[0] == "cards":
                 self._print_cards(hand)
             elif command[0] == "help":
-                print("enter 'play ' number for each card you want to play (e.g. 'play 1 4 2')")
+                print("enter 'play ' number for each card you want to play seperated by space (e.g. 'play 1 4 2')")
                 print("enter 'draw' to draw cards")
                 print("enter 'status' to see, how many cards each player has")
                 print("enter 'top' to show the top card")
@@ -124,6 +127,7 @@ class ConsoleGame:
                     if key not in ("__PREFIX__", "__SUFFIX__", "__DELIMITER__"):
                         print(f"\t{key} = {value if value else EMPTY_STR}")
             elif command[0] == 'end':
+                print("the game was ended prematurely")
                 raise EndGame("Player wants to end the game")
             else:
                 print("unknown command")
