@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from itertools import permutations
 from typing import List, Optional, Tuple, Callable, Dict, cast, Iterator
 

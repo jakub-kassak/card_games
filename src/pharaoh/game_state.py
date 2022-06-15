@@ -46,16 +46,17 @@ class GameState(PClass):
     i: int = field(type=int, mandatory=True, invariant=lambda x: (x >= 0, 'index can not be negative'))
     mc: int = field(type=int, mandatory=True)
     deck_size: int = field(type=int, mandatory=True)
-    __invariant__ = lambda s: ((len(s.dp) > 0, 'discard pile can not be empty'),
-                               (len(s.lp) > 1, 'at least 2 players must play'),
-                               (s.i < len(s.lp), 'index must be smaller than number of players'),
-                               (len(s.lp_mc) == len(s.lp), "size of LP_MC must match size of LP"),
-                               (s.cnt == 0 or len(s.st) > 0 or len(s.dp) == 1, "cnt==0 or len(st)>0 or len(dp)==1"),
-                               (any(x == -1 for x in s.lp_mc), "at least one player must be in game"),
-                               (not s.ace == 0 or s.cnt > 0, 'ace == 0 implies cnt > 0'),
-                               (not s.ace > 0 or s.cnt == 0, 'ace > 0 implies cnt == 0'),
-                               (s.deck_size == sum(map(len, s.lp)) + len(s.dp) + len(s.st), 'card disappeared'),
-                               (s.lp_mc[s.i] == -1, 'finished player is on the move'))
+    __invariant__: Callable = \
+        lambda s: ((len(s.dp) > 0, 'discard pile can not be empty'),
+                   (len(s.lp) > 1, 'at least 2 players must play'),
+                   (s.i < len(s.lp), 'index must be smaller than number of players'),
+                   (len(s.lp_mc) == len(s.lp), "size of LP_MC must match size of LP"),
+                   (s.cnt == 0 or len(s.st) > 0 or len(s.dp) == 1, "cnt==0 or len(st)>0 or len(dp)==1"),
+                   (any(x == -1 for x in s.lp_mc), "at least one player must be in game"),
+                   (not s.ace == 0 or s.cnt > 0, 'ace == 0 implies cnt > 0'),
+                   (not s.ace > 0 or s.cnt == 0, 'ace > 0 implies cnt == 0'),
+                   (s.deck_size == sum(map(len, s.lp)) + len(s.dp) + len(s.st), 'card disappeared'),
+                   (s.lp_mc[s.i] == -1, 'finished player is on the move'))
 
     def __getitem__(self, name: str) -> Pile | PVector | int | Suit | Value:
         return self.__getattribute__(name)
